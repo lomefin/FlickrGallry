@@ -1,36 +1,29 @@
 <!DOCTYPE html> 
 <html> 
 <head> 
-	<title>Chooser</title>
-	
-	<script src="http://code.jquery.com/jquery-1.7.1.js" type="text/javascript"></script>
+	<title>Gallry</title>
 	<script src="lib/mootools/mootools-core.js" type="text/javascript"></script>
 	<script src="lib/mootools/mootools-more.js" type="text/javascript"></script>
 	<script src="lib/gallry/gallry.js" type="text/javascript"></script>
-	
+	<link rel="stylesheet/less" href="css/less/bootstrap/bootstrap.less" />
+	<script src="lib/less/less-1.1.5.min.js" type="text/javascript"></script>
+
 </head>
 <body>
-	<p>API Key: e12e6151732ef08f338ef2c801ccf026</p>
-	<ul>
-		<li><a href="http://www.flickr.com/services/rest/?method=flickr.test.echo&format=json&api_key=6de2ca2573f85335dc0ef2ec9b44ea21">Echo Service</a>
-		<li><a href="http://www.flickr.com/services/rest/?method=flickr.people.getInfo&format=json&api_key=6de2ca2573f85335dc0ef2ec9b44ea21&user_id=18376925@N04">flickr.people.getInfo</a>
-		<li><a href="http://www.flickr.com/services/rest/?method=flickr.people.findByUsername&api_key=6de2ca2573f85335dc0ef2ec9b44ea21&username=leonardoluartegonzalez">flickr.people.findByUsername</a>
-		<li><a href="http://www.flickr.com/services/rest/?method=flickr.people.getPublicPhotos&api_key=6de2ca2573f85335dc0ef2ec9b44ea21&format=json&user_id=18376925@N04">
-		flickr.people.getPublicPhotos</a>
-	</ul>
-	<div id="gallry_container" style="width:800px; height:500px; border: red solid medium;">
-	</div>
-	<div id="gallry_main" style="width:800px; height:50px; border: blue solid medium;">
-		<div id="gallry_user_select">
-			<label for="gallry_username">Username:</label>
-			<input type="text" id="gallry_username" />
-			<button onclick="">Find User</button>
-		</div>
-		<div id="gallry_user_pictures">
-			
+	<div class="container">
+		<div class="content">
+			<div class="row">
+				<div class="page-header">
+      				<h1>Gallry <small>Flickr Image Pickr for WYSIWYG Editrs</small></h1>
+    			</div>
+			</div>
+			<div class="row">
+				<div class="span12">
+					<div id="gallry_container"></div>
+				</div>
+			</div>
 		</div>
 	</div>
-	<div id="extra"></div>
 	<script type="text/javascript">
 		window.addEvent('domready', function() 
 		{

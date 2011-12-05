@@ -56,10 +56,13 @@ Y también quiero vincular el botón a la acción de buscar, como primero me pre
 	
 Hay que prestar atención con que esto demuestra claramente el tema de las clausuras. Las funciones son realmente más que solo el código ejecutable, son _código más contexto_, por lo tanto esta función usará la variable <code>userSelectorInput</code> que estaba definida antes. Además, para poder utilizar el <code>this</code> como está definido en la función que contiene a userSelectorFinder, debo decirle a la funcion que acabo de crear <code>bind(this)</code> así, el "puntero" a <code>this</code> de esa clausura _será el mismo que el de la función que la contiene_, sino el contexto cambiaría a la de <code>userSelectorFinder</code>.
 
-###JQuery está mejor para AJAX
-No soy muy fan de JQuery porque no es tan estructurado, pero una de sus ventajas es que puede hacer la pillería de JSONP, que Mootools *no* implementará. Por lo tanto tuve que agregar JQuery para hacer las invocaciones. Esto puede terminar con la eliminación de Mootools, pero por mientras pueden sobrevivir ambos sin problemas...espero.
+###Mootools More
 
-Lamentablemente, tuve un problema, han sucedido cosas similares en otros lados, pero no encontré una solución apropiada. El problema es que el request de JSON a Flickr no está disparando el trigger que indica que está listo. Entonces, tuve que hacer una turbiedad, hacer que mi código se preocupe de revisar si el resultado está disponible, el código del invocador quedó de esta forma.
+Mootools viene en dos partes: Mootools Core y Mootools More, el primero es lo mínimo que debes tener para decir que tienes Mootools, Mootools More son herramientas extra que se pueden agregar para potenciar tu código.
+More necesita Core, pero no al revés y hay elementos de ambos paquetes que se pueden descartar, para esto pueden ingresar a [Mootools Core Builder](http://mootools.net/core/) y a [Mootools More Builder](http://mootools.net/more/) y bajar copiar personalizadas de las librerías.
+El soporte para JSONP que es una manera de acceder a los datos sin tener problemas de Cross Site Scripting (y que son un dolor de cabeza) viene en Mootools More, al igual que el codigo para hacer desaparecer objetos del DOM en un comando.
+El código del invocador de la API de Flickr es el siguiente:
+
 
 	invokeAPI : function(method, parameters,callback)
 	{
@@ -70,23 +73,57 @@ Lamentablemente, tuve un problema, han sucedido cosas similares en otros lados, 
 		{
 			invocation[key] = parameters[key];
 		}
-		//Invokes the Flicker REST API
-		var request = jQuery.getJSON( GLR_FULL_URI ,invocation, function(data){});
-		//Verifies if the request is done, and if it is, invokes the callback
-		var checkIfIsReady = function(request)
-		{
-			if(request.readyState == 4)
-			{
-				containerRegex = /jsonFlickrApi\((.+?)\)/;
-				postProcessResult = containerRegex.exec(request.responseText)[1];
-				callback(method,JSON.decode(postProcessResult));
-			}
-			else{	this.delay(100,this,request);}
-		};
-		//Waits 300 ms for the first time to check the state of the request
-		checkIfIsReady.delay(300,checkIfIsReady,request);
+		var mootoolsJSONP = new Request.JSONP({
+		    url: GLR_FULL_URI,
+		    callbackKey: 'jsoncallback',
+		    data: invocation,
+		    onRequest: function(url){
+		        // a script tag is created with a src attribute equal to url
+		        console.log(url);
+		    },
+		    onComplete: function(data){
+		        callback(method,data);
+		    }
+		}).send();
 
 	}
 
 Esto debería ser perfectible, pero por ahora funciona y eso es lo importante.
+
+Luego se implementó un método que pregunte por las fotos públicas que tenga el usuario dado que ya podemos saber su verdadero nombre de usuario. Por mientras solo busca las 50 últimas, pero luego podremos scrollear las más viejas.
+Para tener estos datos simplemente hacemos una invocacion a invokeAPI.
+
+	this.invokeAPI('flickr.people.getPublicPhotos',{'user_id':userId,'per_page':50},
+		function(method,data)
+		{
+			console.log(data);
+			this.showUserGallery(data);
+		}.bind(this)
+	);
+
+Posteriormente, se implementó un método que coloca imagenes en un div que permitirán ser seleccionadas más adelante. El código del método no lo colocaré completo aquí pero en resumen es el siguiente:
+
+	showUserGallery : function(data)
+	{
+		//Tengo la lista de fotos, de manera abreviada
+		var photoList = data.photos.photo;
+		//Itero por la lista
+		for(var index =0 ; index< photoList.length; index++)
+		{
+			//Abrevio el objeto
+			var pic = photoList[index];
+			//Genero la url que corresponde a la imagen
+			var picUrl = 'http://farm'+pic.farm+'.staticflickr.com/'+
+							pic.server+'/'+pic.id+'_'+pic.secret+'_'+GLR_DEFAULT_PREVIEW_SIZE+'.jpg';
+			//Creo el elemento nuevo 
+			var img = new Element('img',{'class':'thumbnail', src:picUrl,'alt':pic.name});
+			img.inject(link);
+		}
+	}
+
+Finalmente, le agrego un poco de estilo al sitio del demo para que se vea más agradable. Usé [Twitter Bootstrap](http://twitter.github.com/bootstrap/index.html) que ya es mi favorito para partir un desarrollo. Si se fijan, ya hay algunas clases de CSS incrustadas en la librería, esto vincula la librería a bootstrap, pero dado que la unión es solamente un texto, no aumenta el acoplamiento del sistema como un todo. Quizás se debería modificar el CSS para que cumpla con los requerimientos de layout de la librería, pero esto es una practica común, pues no hay otra vuelta más simple que dar.
+Bootstrap está escrito en LESS, se puede compilar antes o durante la visualización, yo utilizo la librería less.js para compilar la hoja de estilo cuando se carga. 
+
+	<link rel="stylesheet/less" href="css/less/bootstrap/bootstrap.less" />
+	<script src="lib/less/less-1.1.5.min.js" type="text/javascript"></script>
 

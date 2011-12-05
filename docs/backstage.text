@@ -1,0 +1,92 @@
+La creación de Gallry
+=====================
+
+Primero hay que elegir el framework de JS que se usará para la implementación, yo elegí Mootools porque me resulta más cómodo y es compatible con JQuery.
+
+Los proyectos en Javascript generalmente deben venir como un demo del mismo que tenga el código como librería, los que quieran usar el código pueden bajar directamente la carpeta que tiene la librería.
+
+La estructura base que uso es la siguiente:
+
+-LIB //Aqui va todo el Javascript
+  -Mootools //La librería mínima requerida
+  -Gallry //Aquí va el proyecto
+
+Tengo pensado que Gallry no de ser tan grande como para usar varios archivos, además, aún no he usado esos sistemas donde tienes el código en varios archivos y luego se compilan, quizás más adelante.
+
+El Happy Path
+--------------
+Lo que tengo pensado que haga la aplicación es lo siguiente:
+
+1. Se ingresa el nombre de usuario que se quiere revisar
+2. El sistema muestra un listado de fotos del usuario seleccionado
+3. El usuario de la aplicación selecciona fotos que le guste
+4. El sistema muestra las urls de cada una de las fotos seleccionadas
+
+El código.
+----------
+Aunque no es bueno pensar tan adelante, comencé con algunos elementos de configuración, indicando los tamaños que tiene Flickr disponible y la configuración del API_KEY, y los tamaños que querrá el usuario para usar en la aplicación. Usé variables globales con el prefijo GLR para tratar de hacer menos invasiva a la librería.
+
+Para comenzar, hay que agregar la toma de control al sistema. Esto debería dispararlo un boton, un link o comenzar con la página, especialmente en tiempo de desarrollo.
+Para invocarlo, habrá que decirle donde es que podrá trabajar, yo lo vincularé a un div con id gallry_container y lo haré correr directamente en la carga de la página, eso en mootools se hace de la siguiente manera:
+
+	window.addEvent('domready', function() 
+	{
+    	new Gallry('gallry_container');
+	});
+
+Lo primero que hace el código es crear un div para buscar a un usuario. Para construir con Mootools se deben crear nuevos elementos y luego inyectarlos. El ejemplo aplicado al buscador de usuarios es el siguiente:
+	
+	//Creación de los elementos
+	var userSelector = new Element('div',{'id':'gallry_user_selector'});
+	var userSelectorInput = new Element('input',{'type':'text', 'id':'gallry_username'});
+	var userSelectorLabel = new Element('label',{'for':'gallry_username',html:'Username:'});
+	var userSelectorFinder = new Element('button',{'id':'gallry_user_selector_find',html:'Find'})
+	//Inyeccion de los elementos al nodo padre
+	userSelectorLabel.inject(userSelector);
+	userSelectorInput.inject(userSelector);
+	userSelectorFinder.inject(userSelector);
+
+Y también quiero vincular el botón a la acción de buscar, como primero me preocuparé de hacer esto que funcione y luego que funcione bien- siguiendo la recomendación de [Hernán](http://www.ataxic.org/about/#hernan)- lo haré todo inline.
+
+	userSelectorFinder.addEvent('click', function()
+	{
+		var username = userSelectorInput.get('value');
+		//Aqui va el código de la búsqueda
+	}.bind(this));
+	
+Hay que prestar atención con que esto demuestra claramente el tema de las clausuras. Las funciones son realmente más que solo el código ejecutable, son _código más contexto_, por lo tanto esta función usará la variable <code>userSelectorInput</code> que estaba definida antes. Además, para poder utilizar el <code>this</code> como está definido en la función que contiene a userSelectorFinder, debo decirle a la funcion que acabo de crear <code>bind(this)</code> así, el "puntero" a <code>this</code> de esa clausura _será el mismo que el de la función que la contiene_, sino el contexto cambiaría a la de <code>userSelectorFinder</code>.
+
+###JQuery está mejor para AJAX
+No soy muy fan de JQuery porque no es tan estructurado, pero una de sus ventajas es que puede hacer la pillería de JSONP, que Mootools *no* implementará. Por lo tanto tuve que agregar JQuery para hacer las invocaciones. Esto puede terminar con la eliminación de Mootools, pero por mientras pueden sobrevivir ambos sin problemas...espero.
+
+Lamentablemente, tuve un problema, han sucedido cosas similares en otros lados, pero no encontré una solución apropiada. El problema es que el request de JSON a Flickr no está disparando el trigger que indica que está listo. Entonces, tuve que hacer una turbiedad, hacer que mi código se preocupe de revisar si el resultado está disponible, el código del invocador quedó de esta forma.
+
+	invokeAPI : function(method, parameters,callback)
+	{
+		//Adds the minimal parameters to invoke the Flickr API
+		var invocation = {'method':method,'api_key':GLR_API_KEY,'format':'json'};
+		//Add the extra parameters that are request per function
+		for(var key in parameters)
+		{
+			invocation[key] = parameters[key];
+		}
+		//Invokes the Flicker REST API
+		var request = jQuery.getJSON( GLR_FULL_URI ,invocation, function(data){});
+		//Verifies if the request is done, and if it is, invokes the callback
+		var checkIfIsReady = function(request)
+		{
+			if(request.readyState == 4)
+			{
+				containerRegex = /jsonFlickrApi\((.+?)\)/;
+				postProcessResult = containerRegex.exec(request.responseText)[1];
+				callback(method,JSON.decode(postProcessResult));
+			}
+			else{	this.delay(100,this,request);}
+		};
+		//Waits 300 ms for the first time to check the state of the request
+		checkIfIsReady.delay(300,checkIfIsReady,request);
+
+	}
+
+Esto debería ser perfectible, pero por ahora funciona y eso es lo importante.
+

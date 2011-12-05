@@ -1,0 +1,61 @@
+<h1>La creación de Gallry</h1>
+
+<p>Primero hay que elegir el framework de JS que se usará para la implementación, yo elegí Mootools porque me resulta más cómodo y es compatible con JQuery.</p>
+
+<p>Los proyectos en Javascript generalmente deben venir como un demo del mismo que tenga el código como librería, los que quieran usar el código pueden bajar directamente la carpeta que tiene la librería.</p>
+
+<p>La estructura base que uso es la siguiente:</p>
+
+<p>-LIB //Aqui va todo el Javascript
+  -Mootools //La librería mínima requerida
+  -Gallry //Aquí va el proyecto</p>
+
+<p>Tengo pensado que Gallry no de ser tan grande como para usar varios archivos, además, aún no he usado esos sistemas donde tienes el código en varios archivos y luego se compilan, quizás más adelante.</p>
+
+<h2>El Happy Path</h2>
+
+<p>Lo que tengo pensado que haga la aplicación es lo siguiente:</p>
+
+<ol>
+<li>Se ingresa el nombre de usuario que se quiere revisar</li>
+<li>El sistema muestra un listado de fotos del usuario seleccionado</li>
+<li>El usuario de la aplicación selecciona fotos que le guste</li>
+<li>El sistema muestra las urls de cada una de las fotos seleccionadas</li>
+</ol>
+
+<h2>El código.</h2>
+
+<p>Aunque no es bueno pensar tan adelante, comencé con algunos elementos de configuración, indicando los tamaños que tiene Flickr disponible y la configuración del API_KEY, y los tamaños que querrá el usuario para usar en la aplicación. Usé variables globales con el prefijo GLR para tratar de hacer menos invasiva a la librería.</p>
+
+<p>Para comenzar, hay que agregar la toma de control al sistema. Esto debería dispararlo un boton, un link o comenzar con la página, especialmente en tiempo de desarrollo.
+Para invocarlo, habrá que decirle donde es que podrá trabajar, yo lo vincularé a un div con id gallry_container y lo haré correr directamente en la carga de la página, eso en mootools se hace de la siguiente manera:</p>
+
+<pre><code>window.addEvent('domready', function() 
+{
+    new Gallry('gallry_container');
+});
+</code></pre>
+
+<p>Lo primero que hace el código es crear un div para buscar a un usuario. Para construir con Mootools se deben crear nuevos elementos y luego inyectarlos. El ejemplo aplicado al buscador de usuarios es el siguiente:</p>
+
+<pre><code>//Creación de los elementos
+var userSelector = new Element('div',{'id':'gallry_user_selector'});
+var userSelectorInput = new Element('input',{'type':'text', 'id':'gallry_username'});
+var userSelectorLabel = new Element('label',{'for':'gallry_username',html:'Username:'});
+var userSelectorFinder = new Element('button',{'id':'gallry_user_selector_find',html:'Find'})
+//Inyeccion de los elementos al nodo padre
+userSelectorLabel.inject(userSelector);
+userSelectorInput.inject(userSelector);
+userSelectorFinder.inject(userSelector);
+</code></pre>
+
+<p>Y también quiero vincular el botón a la acción de buscar, como primero me preocuparé de hacer esto que funcione y luego que funcione bien- siguiendo la recomendación de <a href="http://www.ataxic.org/about/#hernan">Hernán</a>- lo haré todo inline.</p>
+
+<pre><code>userSelectorFinder.addEvent('click', function()
+{
+    var username = userSelectorInput.get('value');
+    //Aqui va el código de la búsqueda
+}.bind(this));
+</code></pre>
+
+<p>Hay que prestar atención con que esto demuestra claramente el tema de las clausuras. Las funciones son realmente más que solo el código ejecutable, son <em>código más contexto</em>, por lo tanto esta función usará la variable <code>userSelectorInput</code> que estaba definida antes. Además, para poder utilizar el <code>this</code> como está definido en la función que contiene a userSelectorFinder, debo decirle a la funcion que acabo de crear <code>bind(this)</code> así, el "puntero" a this de esa clausura <em>será el mismo que el de la función que la contiene</em>, sino el contexto cambiaría a la de <code>userSelectorFinder</code>.</p>
